@@ -1,21 +1,15 @@
-use clap::{Parser, Subcommand, ArgAction};
-use tracing::{debug, info, warn, error};
+use clap::{ArgAction, Parser, Subcommand};
 use directories_next::ProjectDirs;
-use std::fs;
 use std::env;
-use std::path::PathBuf;
+use std::fs;
+use std::path::{PathBuf, Path};
+use tracing::{debug, error, info, warn};
 
 // Actions:
 // - Create class schema
 // - Validate class schema
 // - Create class instance
 // - Validate instances against class schema
-
-// grow class
-//   - create
-//   - remove (?)
-//   - check
-// grow inst[ance]
 
 #[derive(Debug, Parser)]
 #[command(name = "grow")]
@@ -29,7 +23,7 @@ struct Cli {
 enum Commands {
     #[command(arg_required_else_help = true)]
     Init {
-        class_name: String,
+        collection_name: String,
 
         #[arg(default_value = ".")]
         directory: PathBuf,
@@ -51,27 +45,31 @@ fn main() {
 
     match cli.command {
         Commands::Init {
-            class_name,
+            collection_name,
             directory,
             editor_opt,
             no_edit,
             verbose,
         } => {
             init_tracing(verbose);
+
             ensure_data_dir();
 
-            warn!("TODO: ensure datasets file.");
+            let collection_dir = directory.join(&collection_name);
+            debug!("Using collection directory: {}", collection_dir.display());
+            ensure_dir(&collection_dir);
 
-            warn!("TODO: create dir [{}/.grow].", directory.display());
-            warn!("TODO: create entry for {class_name}.");
+            let documents_dir = collection_dir.join("documents");
+            debug!("Using documents directory: {}", documents_dir.display());
+            ensure_dir(&documents_dir);
 
-            warn!("TODO: create dir [./{class_name}].");
-            warn!("TODO: create dir [./{class_name}/instances].");
-            warn!("TODO: create file [./{class_name}/schema.yml].");
+            warn!("TODO: create file [./{collection_name}/schema.yml].");
+
+            warn!("TODO: create entry for {collection_name}.");
 
             if !no_edit {
                 let editor = resolve_editor(&editor_opt);
-                warn!("TODO: open file [./{class_name}/schema.yml] with {editor}.");
+                warn!("TODO: open file [./{collection_name}/schema.yml] with {editor}.");
             }
         }
 
@@ -115,29 +113,30 @@ fn resolve_editor(editor_opt: &Option<String>) -> String {
     "vim".to_string()
 }
 
-fn ensure_data_dir() -> std::path::PathBuf {
-    let proj = ProjectDirs::from("", "", "grow")
-        .expect("Could not determine standard project directory");
+fn ensure_data_dir() -> PathBuf {
+    let proj =
+        ProjectDirs::from("", "", "grow").expect("Could not determine standard project directory");
 
     let data_dir = proj.data_dir();
-
-    if !data_dir.exists() {
-        if let Err(e) = fs::create_dir_all(data_dir) {
-            error!(
-                "ERROR: could not create data directory at {}: {}",
-                data_dir.display(),
-                e
-            )
-        }
-
-        info!("INFO: Created directory {}", data_dir.display());
-    }
+    debug!("Using data directory: {}", data_dir.display());
+    ensure_dir(data_dir);
 
     data_dir.to_path_buf()
 }
 
+fn ensure_dir(dir_path: &Path) {
+    if !dir_path.exists() {
+        if let Err(e) = fs::create_dir_all(dir_path) {
+            error!(
+                "ERROR: could not create data directory at {}: {}",
+                dir_path.display(),
+                e
+            );
+        }
 
-
+        info!("INFO: Created directory {}", dir_path.display());
+    }
+}
 
 
 
