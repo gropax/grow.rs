@@ -28,12 +28,19 @@
         };
 
         devShells.default = pkgs.mkShell {
+          name = "grow";
+
           buildInputs = with pkgs; [
             rustc
             cargo
             rustfmt
             clippy
+            rust-analyzer
           ];
+
+          shellHook = ''
+            rustup component add rust-src >/dev/null 2>&1 || true
+          '';
         };
 
         apps.default = {
