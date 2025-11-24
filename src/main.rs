@@ -1,4 +1,5 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ArgAction};
+use tracing::{debug, info, warn, error};
 use directories_next::ProjectDirs;
 use std::fs;
 use std::env;
@@ -39,8 +40,8 @@ enum Commands {
         #[arg(short = 'E', long = "no-edit")]
         no_edit: bool,
 
-        #[arg(short = 'v', long = "verbose")]
-        verbose: bool,
+        #[arg(short, long, action = ArgAction::Count)]
+        verbose: u8,
     },
     Run {},
 }
@@ -56,58 +57,65 @@ fn main() {
             no_edit,
             verbose,
         } => {
-            eprintln!("TODO: ensure data dir.");
-            ensure_data_dir(verbose);
-            eprintln!("TODO: ensure datasets file.");
+            init_tracing(verbose);
+            ensure_data_dir();
 
-            eprintln!("TODO: create dir [{}/.grow].", directory.display());
-            eprintln!("TODO: create entry for {class_name}.");
+            warn!("TODO: ensure datasets file.");
 
-            eprintln!("TODO: create dir [./{class_name}].");
-            eprintln!("TODO: create dir [./{class_name}/instances].");
-            eprintln!("TODO: create file [./{class_name}/schema.yml].");
+            warn!("TODO: create dir [{}/.grow].", directory.display());
+            warn!("TODO: create entry for {class_name}.");
+
+            warn!("TODO: create dir [./{class_name}].");
+            warn!("TODO: create dir [./{class_name}/instances].");
+            warn!("TODO: create file [./{class_name}/schema.yml].");
 
             if !no_edit {
-                let editor = resolve_editor(&editor_opt, verbose);
-                eprintln!("TODO: open file [./{class_name}/schema.yml] with {editor}.");
+                let editor = resolve_editor(&editor_opt);
+                warn!("TODO: open file [./{class_name}/schema.yml] with {editor}.");
             }
         }
 
         Commands::Run {} => {
-            eprintln!("Run")
+            warn!("Run")
         }
     }
 }
 
-fn resolve_editor(editor_opt: &Option<String>, verbose: bool) -> String {
+fn init_tracing(level: u8) {
+    let filter = match level {
+        0 => "error",
+        1 => "warn",
+        2 => "info",
+        _ => "debug",
+    };
+
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_writer(std::io::stderr)
+        .init();
+}
+
+fn resolve_editor(editor_opt: &Option<String>) -> String {
     if let Some(editor) = editor_opt.as_deref() {
-        if verbose {
-            eprintln!("Using editor from CLI argument: {}", editor);
-        }
+        debug!("Using editor from CLI argument: {}", editor);
         return editor.to_string();
     }
 
     if let Ok(editor) = env::var("VISUAL") {
-        if verbose {
-            eprintln!("Using editor from VISUAL environment variable: {}", editor);
-        }
+        debug!("Using editor from VISUAL environment variable: {}", editor);
         return editor;
     }
 
     if let Ok(editor) = env::var("EDITOR") {
-        if verbose {
-            eprintln!("Using editor from EDITOR environment variable: {}", editor);
-        }
+        debug!("Using editor from EDITOR environment variable: {}", editor);
         return editor;
     }
 
-    if verbose {
-        eprintln!("No editor specified, falling back to vim");
-    }
+    debug!("No editor specified, falling back to vim");
     "vim".to_string()
 }
 
-fn ensure_data_dir(verbose: bool) -> std::path::PathBuf {
+fn ensure_data_dir() -> std::path::PathBuf {
     let proj = ProjectDirs::from("", "", "grow")
         .expect("Could not determine standard project directory");
 
@@ -115,16 +123,14 @@ fn ensure_data_dir(verbose: bool) -> std::path::PathBuf {
 
     if !data_dir.exists() {
         if let Err(e) = fs::create_dir_all(data_dir) {
-            eprintln!(
+            error!(
                 "ERROR: could not create data directory at {}: {}",
                 data_dir.display(),
                 e
             )
         }
 
-        if verbose {
-            eprintln!("INFO: Created directory {}", data_dir.display());
-        }
+        info!("INFO: Created directory {}", data_dir.display());
     }
 
     data_dir.to_path_buf()
